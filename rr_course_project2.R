@@ -1,4 +1,8 @@
 library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(taRifx)
+library(lattice)
 
 dataURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 fileZip <- "stormData.bz2"
@@ -23,6 +27,36 @@ evtype <- st_data$EVTYPE
 
 st_data$PROPDMGEXP <- toupper(st_data$PROPDMGEXP)
 st_data$CROPDMGEXP <- toupper(st_data$CROPDMGEXP)
+
+st_data$MULTIPROP <- 1
+st_data$MULTICROP <- 1
+
+labels_mult <- sort(unique(c(st_data$PROPDMGEXP,st_data$CROPDMGEXP)))
+values_multprops <- c(1,1,1,rep(10,9),1E9,100,1E3,1E6)
+
+
+mult_props <- as.data.frame(cbind(labels_mult,values_multprops)) %>%
+  remove.factors()%>%
+  rbind(c(NA,1,1))
+
+mult_crops <- mult_props
+names(mult_crops) <- c("labels_mult","values_multcrops")
+
+st_data2 <- merge(x = st_data, y=mult_props, by.x = "PROPDMGEXP", 
+                by.y = "labels_mult")
+
+st_data2 <- merge(x = st_data2, y=mult_crops, by.x = "CROPDMGEXP", 
+                  by.y = "labels_mult")
+
+
+for ( multiplicador in mult_props ){
+  if(!(multiplicador %in% c("K","M","H","B"))){
+    
+  } else{
+    
+  }
+  
+}
 
 evtype <- gsub("^ *","", st_data$EVTYPE)%>%
         toupper()
