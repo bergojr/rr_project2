@@ -58,7 +58,25 @@ st_data2$values_multprops <- as.numeric(st_data2$values_multprops)
 transform(st_data2,MULTIPROP=PROPDMG*values_multprops)
 transform(st_data2,MULTICROP=CROPDMG*values_multcrops)
 
-evtype <- gsub("^ *","", st_data$EVTYPE)%>%
+evtype <- gsub("^ *","", st_data2$EVTYPE)%>%
         toupper()
 evtype <- gsub("^SUMMARY",NA, evtype)
         
+eventlist <- read.csv("event_list.csv", header = FALSE)
+eventlist <- as.character(eventlist$V1)%>%
+  toupper()
+st_data2$EVTYPE_Treated <- NA
+
+for (event in eventlist){
+  val_exp <- paste("*",event,"*", sep="")
+  filtered_events <- grep(val_exp,evtype)
+  st_data2$EVTYPE_Treated[filtered_events]<- event
+}
+
+# eventos TSTM são 226202 casos distribuídos em 26 categorias!!!!
+# Rotina especial para tratamento TSTM
+filtro_TSTM <- grep("*TSTM*", st_data2$EVTYPE)
+st_data2$EVTYPE_Treated[filtro_TSTM]<- "THUNDERSTORM WIND"
+
+
+
