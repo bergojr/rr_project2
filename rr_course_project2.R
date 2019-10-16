@@ -3,6 +3,7 @@ library(ggplot2)
 library(gridExtra)
 library(taRifx)
 library(lattice)
+library(reshape2)
 
 dataURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 fileZip <- "stormData.bz2"
@@ -21,7 +22,7 @@ if (!file.exists(fileZip)){
 
 st_data <- read.csv("stormData.bz2", na.strings =c("","NA"), stringsAsFactors = FALSE)
 
-# https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html
+
 
 evtype <- st_data$EVTYPE
 
@@ -78,5 +79,44 @@ for (event in eventlist){
 filtro_TSTM <- grep("*TSTM*", st_data2$EVTYPE)
 st_data2$EVTYPE_Treated[filtro_TSTM]<- "THUNDERSTORM WIND"
 
+# Preparing data to plot cost damage #
 
+costdata <- st_data2[,c("EVTYPE_Treated","PROPDMGCOST","CROPDMGCOST")]
+names(costdata) <-c("Event", "TypeDamage","Value")
+
+melt_cost <- melt(costdata, variable.name = "TypeDamage", 
+                  value.name = "DMGValue")
+
+gr_melt_cost <- group_by(melt_cost,Event)
+sum_costDMG <- summarize(gr_melt_cost, sum(DMGValue))
+names(sum_costDMG) <-c("Event","DMGValue")
+na_event <- is.na(sum_costDMG$Event)
+sum_costDMG[na_event,"Event"] <- "MISSING VALUE (NA)"
+
+cut_event <- quantile(sum_costDMG$DMGValue, probs = c(0, 0.8, 1))
+rl_event <- filter(sum_costDMG, DMGValue > cut_event[2])
+
+
+
+damage_plot <- ggplot(rl_event, aes(x=reorder(Event,DMGValue), y= DMGValue)) + geom_col()+coord_flip()
+
+
+# Preparing data to plot cost damage #
+
+injurydata <- st_data2[,c("EVTYPE_Treated","PROPDMGCOST","CROPDMGCOST")]
+names(costdata) <-c("Event", "TypeDamage","Value")
+
+melt_cost <- melt(costdata, variable.name = "TypeDamage", 
+                  value.name = "DMGValue")
+
+
+# Useful links:
+#
+# This link explains how works the damage exponents
+#
+# https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html
+# 
+# This is a good link to melt data
+# 
+# https://seananderson.ca/2013/10/19/reshape/
 
