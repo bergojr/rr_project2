@@ -98,17 +98,40 @@ rl_event <- filter(sum_costDMG, DMGValue > cut_event[2])
 
 
 
-damage_plot <- ggplot(rl_event, aes(x=reorder(Event,DMGValue), y= DMGValue)) + geom_col()+coord_flip()
+damage_plot <- ggplot(rl_event, aes(x=reorder(Event,DMGValue), y= DMGValue))
+damage_plot <- damage_plot  + geom_col()
+damage_plot <- damage_plot  + coord_flip()
+damage_plot <- damage_plot  + labs(title = "Historical Economic Losses by Weather Events in USA 1950 - 2012")
+damage_plot <- damage_plot  + theme(plot.title = element_text(hjust = 0.5))
+damage_plot <- damage_plot  + labs(y = "Main losses (US$)" , x = "Event type")
 
+print(damage_plot)
 
 # Preparing data to plot cost damage #
 
-injurydata <- st_data2[,c("EVTYPE_Treated","PROPDMGCOST","CROPDMGCOST")]
-names(costdata) <-c("Event", "TypeDamage","Value")
+injurydata <- st_data2[,c("EVTYPE_Treated","FATALITIES","INJURIES")]
+names(injurydata) <-c("Event", "TypeDamage","Count")
 
-melt_cost <- melt(costdata, variable.name = "TypeDamage", 
-                  value.name = "DMGValue")
+melt_injury <- melt(injurydata, variable.name = "TypeDamage", 
+                  value.name = "Count")
 
+gr_melt_injury <- group_by(melt_injury,Event)
+sum_CountInjury <- summarize(gr_melt_injury, sum(Count))
+names(sum_CountInjury) <-c("Event","Count")
+na_event <- is.na(sum_CountInjury$Event) 
+sum_CountInjury[na_event,"Event"] <- "MISSING VALUE (NA)"
+
+cut_injury <- quantile(sum_CountInjury$Count, probs = c(0, 0.8, 1))
+rl_injury <- filter(sum_CountInjury, Count > cut_injury [2])
+
+
+
+damage_injury <- ggplot(rl_injury, aes(x=reorder(Event,Count), y= Count)) + geom_col()+coord_flip()
+damage_injury <- damage_injury  + geom_col()
+damage_injury <- damage_injury  + coord_flip()
+damage_injury <- damage_injury  + labs(title = "Historical Health Losses by Weather Events in USA 1950 - 2012")
+damage_injury <- damage_injury  + theme(plot.title = element_text(hjust = 0.5))
+damage_injury <- damage_injury  + labs(y = "Main Causes of injury and Death" , x = "Event type")
 
 # Useful links:
 #
