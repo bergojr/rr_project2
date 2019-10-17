@@ -1,0 +1,44 @@
+---
+title: "Reproducible Research"
+author: "Luiz Bergo"
+date: "16/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## A glimpse at NDCD Storm Events in USA from 1950 - 2011
+
+**DICLAIMER:** This document is prerequisite for conclusion of Reproducible Research course offered as part of Data Science path at Coursera. The author made efforts to bring a good analysis, even so, due to some lack on R knlowdge, course deadline and the difficult to treat the data set, errors may occured. The reader is invited to audit the steps and the analysis itself.
+
+### What is this about
+
+The main idea of this work is analyse a dataset from **Storms** occured at the USA in the period of 1.950 to 2011. The database is curated by **National Climatic Data Center (NCDC)** and most of the data were manually inputed leading to *typo* issues. To fix them some techniques of *data cleaning* where applied to focus on answer main questions:
+
+1. Across the United States, which types of events are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+
+```{r libraries, message=FALSE, echo=FALSE}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(taRifx)
+library(lattice)
+library(reshape2)
+```
+
+```{r cars}
+
+```
+
+### Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

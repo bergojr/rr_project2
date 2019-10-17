@@ -37,5 +37,8 @@ rsconnect/
 
 # Instruction files
 *.pdf
+*.html
+*.md
+
 # Data base
 *.bz2
