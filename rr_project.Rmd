@@ -1,5 +1,5 @@
 ---
-title: "Reproducible Research"
+title: "Reproducible Research - Analysis on piece of storm data from NDCD (1950-2011)"
 author: "Luiz Bergo"
 date: "16/10/2019"
 output: html_document
@@ -20,6 +20,20 @@ The main idea of this work is analyse a dataset from **Storms** occured at the U
 1. Across the United States, which types of events are most harmful with respect to population health?
 2. Across the United States, which types of events have the greatest economic consequences?
 
+
+### Data Processing
+
+The packages necesseary to analysis are:
+
+- dplyr
+- ggplot2
+- gridExtra
+- taRifx
+- lattice
+- reshape2
+
+If not installed some code chunk may broke, so it´s recomended to have all of those packages installed prior continue.
+
 ```{r libraries, message=FALSE, echo=FALSE}
 library(dplyr)
 library(ggplot2)
@@ -29,16 +43,236 @@ library(lattice)
 library(reshape2)
 ```
 
-```{r cars}
+The data set used in this work is a subset of the entire data that is availabe at NCDC servers. So, it´s assured the reproducibility if the dataset available at this link is used.
+
+<https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2>
+
+It´s worthy to note that the dataset has data for a long time passed, I mean, 1950, most of that manually inputed, so the blank fields were filled with NA.
+
+```{r download_dataset}
+
+dataURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+fileZip <- "stormData.bz2"
+dirData <- "./data"
+fileCSV <- "stormData.csv"
+
+if (!file.exists(fileZip)){
+        download.file(dataURL,fileZip)
+}
 
 ```
 
-### Including Plots
+```{r cache=TRUE}
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
+st_data <- read.csv("stormData.bz2", na.strings =c("","NA"), stringsAsFactors = FALSE)
+st_data2 <- st_data # Creating a new dataset to avoid destroy original one.
 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r list_of_event_type, message=FALSE, echo=FALSE}
+# This is a type list from oficial document of NDCC
+
+eventlist <- c("Astronomical Low Tide","Avalanche","Blizzard","Coastal Flood","Cold/Wind Chill","Debris Flow","Dense Fog","Dense Smoke","Drought","Dust Devil","Dust Storm", "Excessive Heat","Extreme Cold/Wind Chill","Flash Flood","Flood","Freezing Fog","Frost/Freeze","Funnel Cloud","Hail","Heat","Heavy Rain","Heavy Snow","High Surf","High Wind","Hurricane/Typhoon","Ice Storm","Lakeshore Flood","Lake-Effect Snow","Lightning","Marine Hail","Marine High Wind","Marine Strong Wind","Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Tide","Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression","Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire","Winter Storm","Winter Weather")%>%
+  toupper()
+
+```
+
+
+In a first glance at dataset we observe **37** variables with **902297** observations:
+
+```{r dataview}
+
+dim(st_data)
+head(st_data)
+
+```
+
+Most of the variables won´t be necessary at this work.The key features to answers the question in fact may be reach observing the following variables:
+
+- *EVTYPE*: classify the **type of storm**.
+- *FATALITIES* and *INJURIES*: 
+- *CROPDMG* and *PROPDMG*: respectively quantify the economic loss at **crops**. and **properties**.
+
+For **Reproducible Research** Coursera practitioners, useful information can be found at <https://www.coursera.org/learn/reproducible-research/discussions/weeks/4/threads/38y35MMiEeiERhLphT2-QA>.
+
+Other useful information for a deep understand on datastructure can be found in the following link:
+
+- NDCC data dictionary: <https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf> 
+- NDCC data FAQ: <https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf>
+
+
+### Data preparation
+
+For purpose of this work the data preparation can be divided in three parts.
+
+#### 1. Event typo treatment
+
+As previous commented, the EVTYPE is a key to understand what type of impact brings more loss. The problem that raise is that this information is very noise due many factors from those we highlight:
+
+1. Wrong typing.
+2. Terminology rules and conecpts changes over the time.
+
+The evidence of such explanation is the ***985*** unique values found in the **EVTYPE** column. 
+
+A quick inspection on that is enough to percept many upper and lower issues, missplaced information like "summary of (...)"
+
+```{r unique_original_EVTYPE}
+
+length(unique(st_data$EVTYPE))
+
+```
+
+The EVTYPE where processed as follow:
+
+```{r EVTYPE_preparation}
+
+evtype <- st_data2$EVTYPE
+
+evtype <- gsub("^ *","", st_data2$EVTYPE)%>% # Remove spaces from begin
+  toupper() # Define events as upper case
+evtype <- gsub("^SUMMARY",NA, evtype)  # Remove wrong entries
+
+st_data2$EVTYPE_Treated <- NA
+
+for (event in eventlist){
+  val_exp <- paste("*",event,"*", sep="")
+  filtered_events <- grep(val_exp,evtype)
+  st_data2$EVTYPE_Treated[filtered_events]<- event
+}
+
+# Even after a first treatment there are 226.202 TSTM events distributed in 26 
+# categories!!!!
+# Routine to treat TSTM events
+filtro_TSTM <- grep("*TSTM*", st_data2$EVTYPE)
+st_data2$EVTYPE_Treated[filtro_TSTM]<- "THUNDERSTORM WIND"
+
+
+```
+
+The result of data treatment on ***EVTYPE*** is that the unique values are now  ***42*** and available at a new column named ***EVTYPE_Treated".
+
+```{r}
+length(unique(st_data2$EVTYPE_Treated))
+```
+
+
+#### 2. Injuries and fatalities
+
+The information about health losses is splited in at two columns ***INJURIEs*** and ***FATALITIES***. To work with a small piece of data, this columns and ***EVTYPE_Treated*** where selected from prepared dataset. 
+
+To prepared this data for plot the columns ***INJURIEs*** and ***FATALITIES*** were melted.
+
+For a better analysis, the data the health was quantiled to evaluate the values corresponding to 80% of total of cases.
+
+```{r preparation_health_data}
+
+injurydata <- st_data2[,c("EVTYPE_Treated","FATALITIES","INJURIES")]
+names(injurydata) <-c("Event", "TypeDamage","Count")
+
+melt_injury <- melt(injurydata, variable.name = "TypeDamage", 
+                  value.name = "Count")
+
+gr_melt_injury <- group_by(melt_injury,Event)
+sum_CountInjury <- summarize(gr_melt_injury, sum(Count))
+names(sum_CountInjury) <-c("Event","Count")
+na_event <- is.na(sum_CountInjury$Event) 
+sum_CountInjury[na_event,"Event"] <- "MISSING VALUE (NA)"
+
+# Filtering the cases that correspond to 80% of total injury and fatalities. 
+
+cut_injury <- quantile(sum_CountInjury$Count, probs = c(0, 0.8, 1))
+rl_injury <- filter(sum_CountInjury, Count > cut_injury [2])
+
+```
+
+
+#### 3. Crop and property
+
+The crop and property losses cost were prepared in two steps:
+
+- First:
+
+The cost related to damage on properties and crops are available at columns ***CROPDMG*** and **PROPDMG*** but they are quite afected by ***CROPDMGEXP*** and ***PROPDMGEXP*** respectively.
+
+The ***CROPDMGEXP*** and ***PROPDMGEXP*** are multipliers that vary from 1 to 1E9 and must be applyed to raw values. A reasonable explanation of this particularity in dataset is presented here  <https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html>.
+
+The final result of this process is the creation of new the columns ***MULTICROP*** and ***MULTIPROP***.
+
+```{r }
+
+# Prevent typing problem with classifiers
+
+st_data2$PROPDMGEXP <- toupper(st_data2$PROPDMGEXP)
+st_data2$CROPDMGEXP <- toupper(st_data2$CROPDMGEXP)
+
+
+
+labels_mult <- sort(unique(c(st_data2$PROPDMGEXP,st_data2$CROPDMGEXP)))
+values_mult <- c(1,1,1,rep(10,9),1E9,100,1E3,1E6)
+
+
+mult_props <- as.data.frame(cbind(labels_mult,values_mult)) %>%
+  remove.factors()%>%
+  rbind(c(NA,1,1))
+
+names(mult_props) <- c("labels_mult","values_multprops")
+
+mult_crops <- mult_props
+names(mult_crops) <- c("labels_mult","values_multcrops")
+
+# Transforming data set to include new columns
+
+st_data2 <- merge(x = st_data2, y=mult_props, by.x = "PROPDMGEXP", 
+                by.y = "labels_mult")
+
+st_data2 <- merge(x = st_data2, y=mult_crops, by.x = "CROPDMGEXP", 
+                  by.y = "labels_mult")%>%
+  transform(values_multcrops = as.numeric(values_multcrops))%>%
+  transform(values_multprops = as.numeric(values_multprops))%>%
+  transform(PROPDMGCOST=PROPDMG*values_multprops)%>%
+  transform(CROPDMGCOST=CROPDMG*values_multcrops)
+
+st_data2$values_multcrops <- as.numeric(st_data2$values_multcrops)
+st_data2$values_multprops <- as.numeric(st_data2$values_multprops)
+
+#Applying the multpliers to raw data.
+
+st_data2 <- transform(st_data2,MULTIPROP=PROPDMG*values_multprops)%>%
+  transform(MULTICROP=CROPDMG*values_multcrops)
+
+head(st_data2[,c("EVTYPE","MULTICROP","MULTIPROP")])
+```
+
+
+- Second:
+
+The data related to costs were subset from altered dataset and molten to be prepared for plot.
+
+For a better analysis, the loss data was quantiled to evaluate the values corresponding to 80% of total of losses cost.
+
+```{r}
+
+# Subseting cost data
+
+costdata <- st_data2[,c("EVTYPE_Treated","PROPDMGCOST","CROPDMGCOST")]
+names(costdata) <-c("Event", "TypeDamage","Value")
+
+# Melting data
+
+melt_cost <- melt(costdata, variable.name = "TypeDamage", 
+                  value.name = "DMGValue")
+
+gr_melt_cost <- group_by(melt_cost,Event)
+sum_costDMG <- summarize(gr_melt_cost, sum(DMGValue))
+names(sum_costDMG) <-c("Event","DMGValue")
+na_event <- is.na(sum_costDMG$Event)
+sum_costDMG[na_event,"Event"] <- "MISSING VALUE (NA)"
+
+cut_event <- quantile(sum_costDMG$DMGValue, probs = c(0, 0.8, 1))
+rl_event <- filter(sum_costDMG, DMGValue > cut_event[2])
+
+```
+
+## Results
+
+The first discussion that may take place is to invest in gather data from automated source as much as possible. 
