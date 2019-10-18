@@ -21,7 +21,7 @@ The main idea of this work is analyse a dataset from **Storms** occured at the U
 2. Across the United States, which types of events have the greatest economic consequences?
 
 
-### Data Processing
+### Setting up enviroment
 
 The packages necesseary to analysis are:
 
@@ -69,7 +69,7 @@ st_data2 <- st_data # Creating a new dataset to avoid destroy original one.
 
 ```
 
-```{r list_of_event_type, message=FALSE, echo=FALSE}
+```{r list_of_event_type, message=FALSE}
 # This is a type list from oficial document of NDCC
 
 eventlist <- c("Astronomical Low Tide","Avalanche","Blizzard","Coastal Flood","Cold/Wind Chill","Debris Flow","Dense Fog","Dense Smoke","Drought","Dust Devil","Dust Storm", "Excessive Heat","Extreme Cold/Wind Chill","Flash Flood","Flood","Freezing Fog","Frost/Freeze","Funnel Cloud","Hail","Heat","Heavy Rain","Heavy Snow","High Surf","High Wind","Hurricane/Typhoon","Ice Storm","Lakeshore Flood","Lake-Effect Snow","Lightning","Marine Hail","Marine High Wind","Marine Strong Wind","Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Tide","Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression","Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire","Winter Storm","Winter Weather")%>%
@@ -275,4 +275,57 @@ rl_event <- filter(sum_costDMG, DMGValue > cut_event[2])
 
 ## Results
 
-The first discussion that may take place is to invest in gather data from automated source as much as possible. 
+Let me recap the two questions that drive this work:
+
+***1. Across the United States, which types of events are most harmful with respect to population health?***
+
+***2. Across the United States, which types of events have the greatest economic consequences?***
+
+To answer the first question we present the graphic as follow.
+
+```{r health_issues}
+damage_injury <- ggplot(rl_injury, aes(x=reorder(Event,Count), y= Count))
+damage_injury <- damage_injury  + geom_col()
+damage_injury <- damage_injury  + coord_flip()
+damage_injury <- damage_injury  + labs(title = "Health Losses by Weather Events in USA 1950 - 2011")
+damage_injury <- damage_injury  + theme(plot.title = element_text(hjust = 0.5))
+damage_injury <- damage_injury  + labs(y = "Main Injury and Death" , x = "Event type")
+print(damage_injury)
+```
+
+After analysis it´s clear that ***TORNADO*** events are, far away from the others, the main cause of injuries and deaths due to storms events. We believe that extra effort and analysis must be done to understand how and in wich circustances a tornado becomes more or less harmful. The suggestions are:
+
+- ***Extend the search*** including other databases and features to modelling tornado behaviors.
+- Invest on communication channel to ***inform probability of tornado events*** within weeks ahead.
+- Fund projects for shelter and other infrastructure to ***support population during tornado events***.
+
+It´s worthy to note that the second and fourth cause is related to ***HEAT*** and ***FLOOD*** and this suggest that a problem may is related to overall  climate change, a big issue and a world class problem.
+
+To answer the second question we present the graphic as follow.
+
+```{r economic_losses}
+damage_plot <- ggplot(rl_event, aes(x=reorder(Event,DMGValue), y= DMGValue))
+damage_plot <- damage_plot  + geom_col()
+damage_plot <- damage_plot  + coord_flip()
+damage_plot <- damage_plot  + labs(title = "Economic Losses by Weather Events in USA 1950 - 2011")
+damage_plot <- damage_plot  + theme(plot.title = element_text(hjust = 0.5))
+damage_plot <- damage_plot  + labs(y = "Main losses (US$)" , x = "Event type")
+print(damage_plot)
+```
+
+The first thing it´s worthy to note is the amount of "Missing Values" found in data set but with some property or crop damage related. At this time of problem investigation it´s not possible to explain why this happen, and some questions raised:
+
+- Shall property or crop losses related to broken communication or other side effects that difficult a proper classification?
+- Shall some property or crop losses informed as a fraud?
+
+Aside the missing values three events are highlighted, ***FLOOD***, ***HURRICANE/TYPHOON***, and ***TORNADO***. 
+
+In the previous session the suggestion to investigate ***TORNADO*** events may be apllied here too but aiming to investigate how such events affect crops and propperties, in the context of economic losses, this investigation should include ***HURRICANE/TORNADO***.
+
+It is not surprising that ***FLOOD*** are the main reason for economic losses and is at the same time a question offen related to climate change. The suggestion to minimize effect of flood are:
+
+1. Investigate areas with more ***probability of flood events***.
+2. Maneauver crops and properties in the ***danger zones**.
+3. Invest on development of new bulding technology with more harmony to the environment.
+
+
